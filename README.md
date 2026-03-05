@@ -1,73 +1,45 @@
 # Merge-and-Split-PDF
-### Overview
 
-The provided `index.html` is a client-side PDF manipulation tool that allows users to merge, reorder, and split PDF documents within a web browser. It leverages three primary JavaScript libraries: `pdf.js` for rendering, `pdf-lib` for document modification, and `Sortable.js` for UI interactions. The tool operates entirely in the client's memory, ensuring that no document data is transmitted to a server.
-
----
-
-### Technical Architecture
-
-#### 1. PDF Rendering and Processing
-
-* **Library:** `pdf.js`
-* **Mechanism:** The application uses a worker-based rendering pipeline. When a file is uploaded, it is converted to a `Uint8Array` and loaded via `pdfjsLib.getDocument`.
-* **Concurrency:** A `RENDER_CONCURRENCY` constant (set to 4) manages simultaneous page rendering to maintain UI responsiveness while processing large documents.
-* **Thumbnail Generation:** Each page is rendered onto a `<canvas>` element at a scale of 0.5 for the grid view. A higher resolution scale (2.0) is used for the modal zoom feature.
-
-#### 2. Document Manipulation
-
-* **Library:** `pdf-lib`
-* **State Management:** The application maintains a `sourcePdfs` object, keyed by a unique `fileId` (UUID), which stores the original `Uint8Array` data.
-* **Operations:**
-* **Reordering:** Managed via `Sortable.js` which manipulates the DOM order of page cards. The export function reads this DOM order to determine the sequence of the output PDF.
-* **Splitting:** A "split-zone" toggle on each page card adds an `is-split` class. During export, the logic detects this flag and triggers the creation of a new `PDFDocument` instance, resulting in multiple downloaded files.
-* **Merging:** Pages are copied from source documents into a target document using `copyPages`.
-
-
-
-#### 3. Performance and Memory Management
-
-* **Memory Pruning:** The `refreshUI` function contains logic to delete `sourcePdfs` entries and destroy `pdfProxies` when their associated page cards are removed from the DOM.
-* **Non-blocking Execution:** The application utilizes `scheduler.yield()` or `setTimeout` (via `yieldToMain`) during the export process to prevent the main thread from freezing during heavy cryptographic or serialization tasks.
-* **Constraints:**
-* Max size: 50 MB.
-* Max files: 50.
-
-
+A browser-based utility for reordering, merging, and splitting PDF documents. This tool processes all files locally in the browser, ensuring that document data is never uploaded to a server.
 
 ---
 
-### UI Components
+## Features
 
-| Component | Description |
-| --- | --- |
-| **Dropzone** | Handles `dragover` and `drop` events for file ingestion. |
-| **Grid System** | A CSS Grid layout (`auto-fill`) displaying individual page cards. |
-| **Page Card** | An interactive element containing a delete button, a split trigger, and a thumbnail canvas. |
-| **Zoom Modal** | A fixed-position overlay for full-page inspection. |
-| **Progress Bar** | Visual feedback for the export serialization process. |
+* **File Consolidation**: Combine multiple PDF files into a single document.
+* **Visual Reordering**: Drag and drop individual pages to change their sequence.
+* **Document Splitting**: Define custom split points to export a single source into multiple PDF files.
+* **Page Management**: Remove unnecessary pages from a document before exporting.
+* **Preview Mode**: Double-click any page thumbnail to view a high-resolution zoom of the content.
 
 ---
 
-### Workflow Specifications
+## Instructions for Use
 
-1. **Ingestion:** Files are validated by MIME type. Each file is assigned a UUID.
-2. **Mapping:** Each page in the grid retains metadata (`data-file-id` and `data-page-index`) linking it back to the original source buffer and its specific page number.
-3. **Export:**
-* Iterate through DOM elements in current order.
-* Load the source `pdf-lib` document if not already in the `loadedDocs` cache.
-* Copy the specific page to the active output document.
-* If a split point is reached, save the current document and initialize a new one.
-* Generate Blobs and trigger downloads via transient `<a>` elements.
+1. **Upload**: Click the upload area or drag PDF files directly into the browser window.
+2. **Organize**:
+* Click and hold a page thumbnail to drag it to a new position.
+* Click the **X** icon on any page to remove it from the project.
 
 
+3. **Split**: Click the vertical gap between pages to toggle a split point. A highlighted divider indicates where the document will be broken into a separate file.
+4. **Export**: Click the **Export PDF(s)** button to process the changes and download the resulting files to your device.
+5. **Reset**: Use the **New** button to clear the current workspace and start a new project.
 
 ---
 
-### Dependencies
+## Technical Specifications
 
-* **pdf.js**: `v3.11.174` (Mozilla)
-* **pdf-lib**: `v1.17.1` (Hopding)
-* **Sortable.js**: `v1.15.0` (RubaXa)
+* **Privacy**: All processing is performed client-side. No data is transmitted to external servers.
+* **File Limits**: The application supports a cumulative total of 50 files or 50 MB of data.
+* **Compatibility**: Optimized for modern web browsers with JavaScript enabled.
+* **Dependencies**: Utilizes PDF.js for rendering, PDF-Lib for document assembly, and Sortable.js for the drag-and-drop interface.
 
-Would you like me to implement any additional features, such as page rotation or password-protected PDF support?
+---
+
+## Limitations
+
+* **Encrypted Files**: Password-protected or highly restricted PDFs may fail to load.
+* **Memory Usage**: Large documents may impact browser performance as all pages are rendered as image thumbnails in the workspace.
+
+Would you like me to add a section on how to host this file or perhaps explain the keyboard shortcuts?
