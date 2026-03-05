@@ -41,5 +41,3 @@ A browser-based utility for reordering, merging, and splitting PDF documents. Th
 
 * **Encrypted Files**: Password-protected or highly restricted PDFs may fail to load.
 * **Memory Usage**: Large documents may impact browser performance as all pages are rendered as image thumbnails in the workspace.
-
-Would you like me to add a section on how to host this file or perhaps explain the keyboard shortcuts?
