@@ -418,23 +418,28 @@
 
     function refreshUI() {
         const pages = livePageCount();
-        const files = liveFileCount();
-        statsEl.textContent = `${files} file${files !== 1 ? 's' : ''} · ${pages} page${pages !== 1 ? 's' : ''} · ${totalSizeMB.toFixed(1)} MB`;
-        btnExport.disabled = pages === 0;
+        const activeIds = new Set(Array.from(grid.children).map(el => el.dataset.fileId));
 
-        // Prune sourcePdfs & pdfProxies for fileIds no longer in the DOM
-        const activIds = new Set(Array.from(grid.children).map(el => el.dataset.fileId));
+        // Release source data for files with no remaining pages.
         for (const id of Object.keys(sourcePdfs)) {
-            if (!activIds.has(id)) {
-                delete sourcePdfs[id];
-            }
+            if (!activeIds.has(id)) delete sourcePdfs[id];
         }
         for (const id of Object.keys(pdfProxies)) {
-            if (!activIds.has(id)) {
+            if (!activeIds.has(id)) {
                 pdfProxies[id].destroy();
                 delete pdfProxies[id];
             }
         }
+
+        // Recalculate from retained sources so deleting every page from a file
+        // also releases its share of the upload-size budget.
+        totalSizeMB = Object.values(sourcePdfs).reduce(
+            (total, bytes) => total + bytes.byteLength / (1024 * 1024), 0
+        );
+
+        const files = activeIds.size;
+        statsEl.textContent = `${files} file${files !== 1 ? 's' : ''} · ${pages} page${pages !== 1 ? 's' : ''} · ${totalSizeMB.toFixed(1)} MB`;
+        btnExport.disabled = pages === 0;
     }
 
     // ── Yield helper (non-blocking loop tick) ────────────────────────────────
@@ -528,7 +533,24 @@
             await drainRenderQueue(renderQueue);
         } catch (err) {
             console.error('Error processing PDF:', fileName, err);
-            alert(`Could not process "${fileName}". It may be corrupted or password-protected.`);
+
+            // Do not leave a partial set of pages behind after a failed import.
+            Array.from(grid.children)
+                .filter(card => card.dataset.fileId === fileId)
+                .forEach(card => card.remove());
+
+            delete sourcePdfs[fileId];
+            if (pdfProxies[fileId]) {
+                pdfProxies[fileId].destroy();
+                delete pdfProxies[fileId];
+            }
+
+            const message = String(err?.message || err);
+            if (/password/i.test(message)) {
+                alert(`Could not open "${fileName}". It requires a password. Unlock it and upload it again.`);
+            } else {
+                alert(`Could not process "${fileName}". The PDF may be corrupted or use unsupported encryption.`);
+            }
         }
     }
 
